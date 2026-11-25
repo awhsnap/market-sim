@@ -12,7 +12,7 @@ type AccountSummary struct {
 	Equity     int64 // cash + position * mark
 	Realized   int64
 	Unrealized int64
-	PnL        int64 // equity now minus equity at start (valued at the start price)
+	PnL        int64 // trading P&L: equity now minus starting cash and shares, both valued at mark
 }
 
 // Summary is the whole market valued at one mark price.
