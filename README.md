@@ -15,6 +15,19 @@ Built with Go (standard library only) and plain HTML, CSS and JavaScript. Deploy
 | Path | What it is |
 | --- | --- |
 | `engine/` | Order book, matching, accounts and FIFO position accounting |
+| `sim/` | Participants and their strategies, and the tick loop that drives the market |
+
+## How the price moves
+
+There is no external price feed or random walk. The price is the last trade, and trades only happen when participants or the market maker cross the spread. Participants quote around the book mid (or the last trade when one side is empty), so buy pressure lifts the price and sell pressure pushes it down.
+
+Built-in participant strategies:
+
+- `random`: noise trader, random side each time it acts.
+- `momentum`: buys when the short moving average is above the long one, sells when below.
+- `meanrev`: buys when price is below its long moving average, sells when above.
+
+Any participant can be buy only, sell only or both, and can be added, changed, paused or removed while the sim runs.
 
 ## Development
 
