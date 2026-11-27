@@ -465,14 +465,16 @@ function css(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+// Size the canvas backing store to its CSS box. The CSS sets the height,
+// so redrawing can never change the layout (and never moves the page).
 function setupCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.clientWidth;
-  const h = +canvas.getAttribute("height");
-  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    canvas.style.height = h + "px";
+  const h = canvas.clientHeight;
+  const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
+  if (canvas.width !== bw || canvas.height !== bh) {
+    canvas.width = bw;
+    canvas.height = bh;
   }
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -526,7 +528,17 @@ function visiblePoints(canvas) {
   return bucket(first > 0 ? pts.slice(first) : pts, size);
 }
 
+let drawQueued = false;
 function drawCharts() {
+  if (drawQueued) return;
+  drawQueued = true;
+  requestAnimationFrame(() => {
+    drawQueued = false;
+    drawChartsNow();
+  });
+}
+
+function drawChartsNow() {
   const bars = visiblePoints($("#price"));
   drawPrice(bars);
   drawPnL(bars);
@@ -687,7 +699,7 @@ for (const id of ["#price", "#pnl"]) {
   });
 }
 
-window.addEventListener("resize", () => state && drawCharts());
+new ResizeObserver(() => state && drawCharts()).observe($("#price"));
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state && drawCharts());
 
 // ---------- start ----------
