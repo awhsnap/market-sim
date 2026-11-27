@@ -76,7 +76,7 @@ type ParticipantInfo struct {
 type Point struct {
 	Tick    int64     `json:"tick"`
 	Time    time.Time `json:"time"`
-	Open    int64     `json:"open"` // first trade this tick, else previous close
+	Open    int64     `json:"open"` // previous close, so candles join up
 	High    int64     `json:"high"`
 	Low     int64     `json:"low"`
 	Close   int64     `json:"close"` // mark at end of tick
@@ -335,7 +335,6 @@ func (s *Simulator) recordLocked() Point {
 		Trades: len(trades),
 	}
 	if len(trades) > 0 {
-		pt.Open, pt.High, pt.Low = trades[0].Price, trades[0].Price, trades[0].Price
 		for _, t := range trades {
 			pt.High = max(pt.High, t.Price)
 			pt.Low = min(pt.Low, t.Price)
