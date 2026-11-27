@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Sim</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Market Sim <span class="muted" id="tick">tick 0</span></div>
+    <div class="controls">
+      <button id="play" class="btn primary" type="button">Play</button>
+      <button id="step" class="btn" type="button" title="Advance one tick">Step</button>
+      <label class="inline">Speed
+        <select id="speed">
+          <option value="50">Fast (50ms)</option>
+          <option value="100">Quick (100ms)</option>
+          <option value="250" selected>Normal (250ms)</option>
+          <option value="500">Slow (500ms)</option>
+          <option value="1000">Very slow (1s)</option>
+        </select>
+      </label>
+      <button id="reset" class="btn danger" type="button">Reset</button>
+      <span id="conn" class="conn" title="Live connection">●</span>
+    </div>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <main class="layout">
+    <section class="card chart-card">
+      <div class="card-head">
+        <h2>Price</h2>
+        <span class="legend" id="legend"></span>
+        <select id="window" aria-label="Chart window">
+          <option value="100">100 ticks</option>
+          <option value="300" selected>300 ticks</option>
+          <option value="1000">1000 ticks</option>
+          <option value="5000">All</option>
+        </select>
+      </div>
+      <canvas id="price" height="320"></canvas>
+      <div class="card-head sub">
+        <h3>Capital: you vs participants (trading P&amp;L)</h3>
+        <span class="legend"><i class="sw mm"></i>You <i class="sw pp"></i>Participants</span>
+      </div>
+      <canvas id="pnl" height="140"></canvas>
+    </section>
+
+    <aside class="side">
+      <section class="card">
+        <h2>Order ticket <span class="muted small">trading as market maker</span></h2>
+        <form id="ticket" class="ticket" autocomplete="off">
+          <div class="seg" role="radiogroup" aria-label="Side">
+            <input type="radio" name="side" id="side-buy" value="buy" checked><label for="side-buy" class="buy">Buy</label>
+            <input type="radio" name="side" id="side-sell" value="sell"><label for="side-sell" class="sell">Sell</label>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="Order type">
+            <input type="radio" name="type" id="type-limit" value="limit" checked><label for="type-limit">Limit</label>
+            <input type="radio" name="type" id="type-market" value="market"><label for="type-market">Market</label>
+          </div>
+          <label>Price ($)<input id="t-price" name="price" type="number" step="0.01" min="0.01" required></label>
+          <label>Quantity<input id="t-qty" name="qty" type="number" step="1" min="1" value="10" required></label>
+          <button class="btn primary wide" type="submit" id="t-submit">Place buy limit</button>
+          <p class="hint" id="t-hint">Click a price in the book to fill it in.</p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Order book</h2>
+        <div class="book" id="book"></div>
+      </section>
+    </aside>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Your position <span class="muted small">FIFO lots</span></h2>
+      </div>
+      <div class="kv" id="maker"></div>
+      <table class="tbl" id="lots"><thead><tr><th>#</th><th>Side</th><th class="r">Qty</th><th class="r">Open price</th><th class="r">Unrealized</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Your open orders</h2>
+        <button class="btn small" id="cancel-all" type="button">Cancel all</button>
+      </div>
+      <table class="tbl" id="orders"><thead><tr><th>Side</th><th>Type</th><th class="r">Price</th><th class="r">Filled</th><th class="r">Qty</th><th></th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="card wide-card">
+      <div class="card-head">
+        <h2>Participants</h2>
+        <span class="muted small" id="p-totals"></span>
+      </div>
+      <div class="scroll-x">
+        <table class="tbl" id="participants">
+          <thead><tr>
+            <th>Name</th><th>Logic</th><th>Can trade</th>
+            <th class="r">Cash</th><th class="r">Shares</th><th class="r">Avg</th><th class="r">Capital</th><th class="r">P&amp;L</th>
+            <th class="r">Orders</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <details class="add" open>
+        <summary>Add participant</summary>
+        <form id="add" class="add-form" autocomplete="off">
+          <label>Name<input name="name" maxlength="40" placeholder="Trader"></label>
+          <label>Logic<select name="strategy"></select></label>
+          <label>Can trade<select name="permission">
+            <option value="buy_and_sell">Buy and sell</option>
+            <option value="buy_only">Buy only</option>
+            <option value="sell_only">Sell only</option>
+          </select></label>
+          <label>Cash ($)<input name="cash" type="number" min="0" step="1" value="10000"></label>
+          <label>Shares<input name="shares" type="number" min="0" step="1" value="50"></label>
+          <label>Activity<input name="activity" type="number" min="0.01" max="1" step="any" value="0.5" title="Chance of acting each tick"></label>
+          <label>Aggression<input name="aggression" type="number" min="0" max="1" step="any" value="0.2" title="Chance of a market order instead of a limit"></label>
+          <label>Max order<input name="maxQty" type="number" min="1" step="1" value="10"></label>
+          <button class="btn primary" type="submit">Add</button>
+        </form>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Trades</h2>
+      <table class="tbl tape" id="tape"><thead><tr><th>Tick time</th><th>Buyer</th><th>Seller</th><th class="r">Price</th><th class="r">Qty</th></tr></thead><tbody></tbody></table>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

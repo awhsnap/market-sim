@@ -16,6 +16,8 @@ Built with Go (standard library only) and plain HTML, CSS and JavaScript. Deploy
 | --- | --- |
 | `engine/` | Order book, matching, accounts and FIFO position accounting |
 | `sim/` | Participants and their strategies, and the tick loop that drives the market |
+| `web/` | HTTP server, JSON API, live event stream and the browser UI (`web/static`) |
+| `cmd/marketsim/` | The server binary |
 
 ## How the price moves
 
@@ -29,10 +31,27 @@ Built-in participant strategies:
 
 Any participant can be buy only, sell only or both, and can be added, changed, paused or removed while the sim runs.
 
-## Development
+## Running locally
 
 ```sh
-go test ./...
+go run ./cmd/marketsim      # then open http://localhost:8080
+go test -race ./...
+```
+
+| Variable | Effect |
+| --- | --- |
+| `PORT` | Listen port, default 8080 |
+| `MARKETSIM_PASSWORD` | If set, the site asks for this password (any username) |
+| `MARKETSIM_AUTOPLAY` | `false` starts the market paused |
+
+## Deploying
+
+Every push to `main` runs the tests and deploys to Fly.io through `.github/workflows/deploy.yml`, using the `FLY_API_TOKEN` repository secret. The app runs as a single machine that never auto-stops, because the market lives in memory: a restart or deploy starts a fresh market.
+
+To password-protect the deployed site:
+
+```sh
+fly secrets set MARKETSIM_PASSWORD=choose-something --app market-sim-awhsnap
 ```
 
 Prices are integer cents and quantities are whole units, so the engine never uses floating point.

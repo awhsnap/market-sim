@@ -2,33 +2,33 @@ package engine
 
 // AccountSummary is an account valued at the current mark.
 type AccountSummary struct {
-	ID         int64
-	Name       string
-	Permission Permission
-	Unlimited  bool
-	Cash       int64
-	Position   int64
-	AvgPrice   int64
-	Equity     int64 // cash + position * mark
-	Realized   int64
-	Unrealized int64
-	PnL        int64 // trading P&L: equity now minus starting cash and shares, both valued at mark
+	ID         int64      `json:"id"`
+	Name       string     `json:"name"`
+	Permission Permission `json:"permission"`
+	Unlimited  bool       `json:"unlimited"`
+	Cash       int64      `json:"cash"`
+	Position   int64      `json:"position"`
+	AvgPrice   int64      `json:"avgPrice"`
+	Equity     int64      `json:"equity"` // cash + position * mark
+	Realized   int64      `json:"realized"`
+	Unrealized int64      `json:"unrealized"`
+	PnL        int64      `json:"pnl"` // trading P&L: equity now minus starting cash and shares, both valued at mark
 }
 
 // Summary is the whole market valued at one mark price.
 type Summary struct {
-	Mark int64
+	Mark int64 `json:"mark"`
 
 	// Participants are all capital-limited accounts.
-	Participants      []AccountSummary
-	ParticipantEquity int64 // total participant capital at mark
-	ParticipantPnL    int64
-	ParticipantPos    int64 // net participant position
+	Participants      []AccountSummary `json:"participants"`
+	ParticipantEquity int64            `json:"participantEquity"` // total participant capital at mark
+	ParticipantPnL    int64            `json:"participantPnL"`
+	ParticipantPos    int64            `json:"participantPos"` // net participant position
 
 	// MarketMakers are unlimited accounts (normally exactly one).
-	MarketMakers []AccountSummary
-	MakerPnL     int64
-	MakerPos     int64
+	MarketMakers []AccountSummary `json:"marketMakers"`
+	MakerPnL     int64            `json:"makerPnL"`
+	MakerPos     int64            `json:"makerPos"`
 }
 
 // Summarize values every account at the current mark. Because every trade

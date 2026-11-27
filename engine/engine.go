@@ -467,3 +467,10 @@ func (e *Engine) TradesSince(afterID int64) []Trade {
 	i := sort.Search(len(e.trades), func(i int) bool { return e.trades[i].ID > afterID })
 	return append([]Trade(nil), e.trades[i:]...)
 }
+
+// LastTradeID returns the ID of the most recent trade, or 0 before any.
+func (e *Engine) LastTradeID() int64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.nextTrade
+}
