@@ -465,14 +465,16 @@ function css(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+// Size the canvas backing store to its CSS box. The CSS sets the height,
+// so redrawing can never change the layout (and never moves the page).
 function setupCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.clientWidth;
-  const h = +canvas.getAttribute("height");
-  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    canvas.style.height = h + "px";
+  const h = canvas.clientHeight;
+  const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
+  if (canvas.width !== bw || canvas.height !== bh) {
+    canvas.width = bw;
+    canvas.height = bh;
   }
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -480,28 +482,38 @@ function setupCanvas(canvas) {
   return { ctx, w, h };
 }
 
-// Group points into at most maxBars candles.
-function bucket(points, maxBars) {
-  const size = Math.max(1, Math.ceil(points.length / maxBars));
-  if (size === 1) return points;
+// Group points into candles of `size` ticks. Buckets are aligned to tick
+// numbers, so existing candles keep their shape as new ticks arrive.
+function bucket(points, size) {
+  if (size <= 1) return points;
   const out = [];
-  for (let i = 0; i < points.length; i += size) {
-    const g = points.slice(i, i + size);
-    const last = g[g.length - 1];
-    out.push({
-      tick: last.tick,
-      time: last.time,
-      open: g[0].open,
-      close: last.close,
-      high: Math.max(...g.map((p) => p.high)),
-      low: Math.min(...g.map((p) => p.low)),
-      volume: g.reduce((s, p) => s + p.volume, 0),
-      makerPnL: last.makerPnL,
-      participantPnL: last.participantPnL,
-      firstTick: g[0].tick,
-    });
+  let cur = null;
+  for (const p of points) {
+    const key = Math.floor(p.tick / size);
+    if (!cur || cur.key !== key) {
+      cur = { ...p, key, firstTick: p.tick };
+      out.push(cur);
+      continue;
+    }
+    cur.tick = p.tick;
+    cur.time = p.time;
+    cur.close = p.close;
+    cur.high = Math.max(cur.high, p.high);
+    cur.low = Math.min(cur.low, p.low);
+    cur.volume += p.volume;
+    cur.trades += p.trades;
+    cur.makerPnL = p.makerPnL;
+    cur.participantPnL = p.participantPnL;
   }
   return out;
+}
+
+// Ticks per candle, rounded to a steady value so it doesn't change on
+// every update.
+const STEPS = [1, 2, 3, 4, 5, 10, 15, 20, 25, 50, 100, 200, 250, 500, 1000];
+function candleSize(ticks, maxBars) {
+  const need = Math.ceil(ticks / maxBars);
+  return STEPS.find((s) => s >= need) || need;
 }
 
 const AXIS_W = 64;
@@ -510,10 +522,23 @@ function visiblePoints(canvas) {
   const n = +$("#window").value;
   const pts = history.slice(-n);
   const maxBars = Math.max(20, Math.floor((canvas.clientWidth - AXIS_W) / 6));
-  return bucket(pts, maxBars);
+  const size = candleSize(Math.max(pts.length, Math.min(n, 300)), maxBars);
+  // Start on a bucket boundary so the first candle isn't a partial one.
+  const first = pts.findIndex((p) => p.tick % size === 0);
+  return bucket(first > 0 ? pts.slice(first) : pts, size);
 }
 
+let drawQueued = false;
 function drawCharts() {
+  if (drawQueued) return;
+  drawQueued = true;
+  requestAnimationFrame(() => {
+    drawQueued = false;
+    drawChartsNow();
+  });
+}
+
+function drawChartsNow() {
   const bars = visiblePoints($("#price"));
   drawPrice(bars);
   drawPnL(bars);
@@ -570,9 +595,11 @@ function drawPrice(bars) {
   });
 
   // candles
+  const flat = css("--muted");
   bars.forEach((b, i) => {
     const x = Math.round(i * slot + slot / 2) + 0.5;
-    const color = b.close >= b.open ? up : down;
+    // Gray for candles with no trades, so quiet ticks don't read as moves.
+    const color = !b.trades ? flat : b.close >= b.open ? up : down;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.moveTo(x, y(b.high)); ctx.lineTo(x, y(b.low)); ctx.stroke();
@@ -672,7 +699,7 @@ for (const id of ["#price", "#pnl"]) {
   });
 }
 
-window.addEventListener("resize", () => state && drawCharts());
+new ResizeObserver(() => state && drawCharts()).observe($("#price"));
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state && drawCharts());
 
 // ---------- start ----------
