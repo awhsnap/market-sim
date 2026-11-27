@@ -112,15 +112,15 @@ func (s OrderStatus) String() string {
 // Order is an order as tracked by the engine. Values returned from the
 // engine are copies.
 type Order struct {
-	ID        int64
-	AccountID int64
-	Side      Side
-	Type      OrderType
-	Price     int64 // limit price in cents; 0 for market orders
-	Qty       int64 // original quantity
-	Remaining int64
-	Status    OrderStatus
-	Created   time.Time
+	ID        int64       `json:"id"`
+	AccountID int64       `json:"accountID"`
+	Side      Side        `json:"side"`
+	Type      OrderType   `json:"type"`
+	Price     int64       `json:"price"` // limit price in cents; 0 for market orders
+	Qty       int64       `json:"qty"`   // original quantity
+	Remaining int64       `json:"remaining"`
+	Status    OrderStatus `json:"status"`
+	Created   time.Time   `json:"created"`
 	seq       int64
 }
 
@@ -138,22 +138,22 @@ type OrderRequest struct {
 
 // Trade is a single execution between a resting order and an incoming one.
 type Trade struct {
-	ID        int64
-	Price     int64
-	Qty       int64
-	BuyerID   int64
-	SellerID  int64
-	BuyOrder  int64
-	SellOrder int64
-	Aggressor Side
-	Time      time.Time
+	ID        int64     `json:"id"`
+	Price     int64     `json:"price"`
+	Qty       int64     `json:"qty"`
+	BuyerID   int64     `json:"buyerID"`
+	SellerID  int64     `json:"sellerID"`
+	BuyOrder  int64     `json:"buyOrder"`
+	SellOrder int64     `json:"sellOrder"`
+	Aggressor Side      `json:"aggressor"`
+	Time      time.Time `json:"time"`
 }
 
 // Lot is one open position lot. Qty is positive for long, negative for short.
 type Lot struct {
-	Qty    int64
-	Price  int64
-	Opened time.Time
+	Qty    int64     `json:"qty"`
+	Price  int64     `json:"price"`
+	Opened time.Time `json:"opened"`
 }
 
 // Errors returned by the engine.
@@ -168,4 +168,53 @@ var (
 	ErrInsufficientCash   = errors.New("insufficient cash")
 	ErrInsufficientShares = errors.New("insufficient shares")
 	ErrOrderClosed        = errors.New("order is no longer open")
+	ErrInvalidPermission  = errors.New("permission must be buy_and_sell, buy_only or sell_only")
 )
+
+// Text encoding so the enums read as words in JSON.
+
+func (s Side) MarshalText() ([]byte, error) { return []byte(s.String()), nil }
+
+func (s *Side) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "buy":
+		*s = Buy
+	case "sell":
+		*s = Sell
+	default:
+		return ErrInvalidSide
+	}
+	return nil
+}
+
+func (t OrderType) MarshalText() ([]byte, error) { return []byte(t.String()), nil }
+
+func (t *OrderType) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "limit":
+		*t = Limit
+	case "market":
+		*t = Market
+	default:
+		return ErrInvalidType
+	}
+	return nil
+}
+
+func (p Permission) MarshalText() ([]byte, error) { return []byte(p.String()), nil }
+
+func (p *Permission) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "buy_and_sell", "":
+		*p = BuyAndSell
+	case "buy_only":
+		*p = BuyOnly
+	case "sell_only":
+		*p = SellOnly
+	default:
+		return ErrInvalidPermission
+	}
+	return nil
+}
+
+func (s OrderStatus) MarshalText() ([]byte, error) { return []byte(s.String()), nil }

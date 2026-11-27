@@ -84,6 +84,12 @@ type Point struct {
 	BestAsk int64     `json:"bestAsk"`
 	Volume  int64     `json:"volume"`
 	Trades  int       `json:"trades"`
+
+	// Capital at the end of the tick, valued at Close.
+	MakerPnL          int64 `json:"makerPnL"`
+	MakerPos          int64 `json:"makerPos"`
+	ParticipantEquity int64 `json:"participantEquity"`
+	ParticipantPnL    int64 `json:"participantPnL"`
 }
 
 // ErrUnknownParticipant is returned for an ID that is not a participant.
@@ -341,6 +347,9 @@ func (s *Simulator) recordLocked() Point {
 	pt.Low = min(pt.Low, pt.Close)
 	pt.BestBid, _ = s.eng.BestBid()
 	pt.BestAsk, _ = s.eng.BestAsk()
+	sum := s.eng.Summarize()
+	pt.MakerPnL, pt.MakerPos = sum.MakerPnL, sum.MakerPos
+	pt.ParticipantEquity, pt.ParticipantPnL = sum.ParticipantEquity, sum.ParticipantPnL
 
 	s.history = append(s.history, pt)
 	if over := len(s.history) - s.cfg.HistoryLen; over > 0 {

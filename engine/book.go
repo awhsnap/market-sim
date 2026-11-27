@@ -83,9 +83,9 @@ func (b *bookSide) popFront() {
 
 // DepthLevel is an aggregated price level for display.
 type DepthLevel struct {
-	Price  int64
-	Qty    int64
-	Orders int
+	Price  int64 `json:"price"`
+	Qty    int64 `json:"qty"`
+	Orders int   `json:"orders"`
 }
 
 func (b *bookSide) depth(n int) []DepthLevel {
